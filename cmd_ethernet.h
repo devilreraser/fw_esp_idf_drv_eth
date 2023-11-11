@@ -12,14 +12,10 @@
 extern "C" {
 #endif
 
-#include <sdkconfig.h>
-#if CONFIG_USE_ETHERNET
-
 // Register iperf Ethernet functions
 //void register_ethernet(void);
 void cmd_ethernet_iperf_register(void);
 
-#endif //#if CONFIG_USE_ETHERNET
 
 #ifdef __cplusplus
 }

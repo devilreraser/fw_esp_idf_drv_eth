@@ -7,10 +7,6 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include <sdkconfig.h>
-
-#if CONFIG_USE_ETHERNET
-
-
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -20,6 +16,7 @@
 #include "esp_console.h"
 #include "esp_event.h"
 #include "esp_eth.h"
+#include "esp_mac.h"
 #include "driver/gpio.h"
 #include "argtable3/argtable3.h"
 #include "iperf.h"
@@ -191,11 +188,11 @@ static int eth_cmd_iperf(int argc, char **argv)
     printf("mode=%s-%s sip=%d.%d.%d.%d:%d, dip=%d.%d.%d.%d:%d, interval=%d, time=%d\r\n",
            cfg.flag & IPERF_FLAG_TCP ? "tcp" : "udp",
            cfg.flag & IPERF_FLAG_SERVER ? "server" : "client",
-           cfg.source_ip4 & 0xFF, (cfg.source_ip4 >> 8) & 0xFF, (cfg.source_ip4 >> 16) & 0xFF,
-           (cfg.source_ip4 >> 24) & 0xFF, cfg.sport,
-           cfg.destination_ip4 & 0xFF, (cfg.destination_ip4 >> 8) & 0xFF,
-           (cfg.destination_ip4 >> 16) & 0xFF, (cfg.destination_ip4 >> 24) & 0xFF, cfg.dport,
-           cfg.interval, cfg.time);
+           (int)(cfg.source_ip4 & 0xFF), (int)((cfg.source_ip4 >> 8) & 0xFF), (int)((cfg.source_ip4 >> 16) & 0xFF),
+           (int)((cfg.source_ip4 >> 24) & 0xFF), (int)(cfg.sport),
+           (int)(cfg.destination_ip4 & 0xFF), (int)((cfg.destination_ip4 >> 8) & 0xFF),
+           (int)((cfg.destination_ip4 >> 16) & 0xFF), (int)((cfg.destination_ip4 >> 24) & 0xFF), (int)(cfg.dport),
+           (int)(cfg.interval), (int)(cfg.time));
 
     iperf_start(&cfg);
     return 0;
@@ -394,10 +391,7 @@ void register_ethernet(void)
     ESP_ERROR_CHECK(esp_console_cmd_register(&iperf_cmd));
 }
 
-
 void cmd_ethernet_iperf_register(void)
 {
     register_ethernet();
 }
-
-#endif //#if CONFIG_USE_ETHERNET

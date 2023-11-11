@@ -18,9 +18,6 @@ extern "C"
 /* *****************************************************************************
  * Header Includes
  **************************************************************************** */
-#include <sdkconfig.h>
-#if CONFIG_USE_ETHERNET
-
 #include <stdint.h> 
 #include "esp_err.h"  
 #include "esp_netif.h"
@@ -77,8 +74,6 @@ void drv_eth_print(void);
 void drv_eth_wait_get_ip_ms(int timeout);
 void drv_eth_init(void);
 esp_err_t drv_eth_get_mac(drv_eth_interface_t ifx, uint8_t mac[6]);
-
-#endif  //#if CONFIG_USE_ETHERNET
 
 #ifdef __cplusplus
 }

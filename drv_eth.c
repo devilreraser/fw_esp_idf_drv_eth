@@ -12,9 +12,10 @@
  * Header Includes
  **************************************************************************** */
 #include "drv_eth.h"
-#if CONFIG_USE_ETHERNET
+#include "cmd_eth.h"
+#include "cmd_ethernet.h"
 
-#include "drv_wifi_if.h"
+//#include "drv_wifi.h"???
 
 
 //#include <sdkconfig.h>
@@ -38,21 +39,30 @@
 #include "driver/spi_master.h"
 #endif // CONFIG_USE_SPI_ETHERNET
 
-#include "esp_wifi.h"   //for mac address usage
+//#include "esp_wifi.h"   //for mac address usage
 
 #include "esp_rom_efuse.h"
 #include "esp_mac.h"
 
 
+#if CONFIG_APP_SOCKET_UDP_USE
+#include "app_socket_udp.h"
+#endif
 
-#include "app_socket_if.h"
-#include "drv_socket_if.h"
 
-#include "drv_nvs_if.h"
+//#include "drv_socket.h"
+
+
+#if CONFIG_DRV_NVS_USE
+#include "drv_nvs.h"
+#endif
 
 #include "lwip/netif.h"
 #include "lwip/dhcp.h"
 #include "lwip/ip4_addr.h"
+//#include "lwip/err.h"
+//#include "lwip/sys.h"
+#include <netdb.h>
 
 
 #define INDIRECT_HANDLE_GET_NETIF   1
@@ -331,6 +341,7 @@ int drv_eth_get_netif_count(void)
     return esp_netif_eth_count;
 }
 
+#if CONFIG_DRV_NVS_USE
 void drv_eth_save_config(void)
 {
     if (bSkipEthConfigSave == false)
@@ -432,6 +443,8 @@ void drv_eth_cfg_check_save(void)
         //bSkipEthConfigSave = true;
     }
 }
+
+#endif  /* #if CONFIG_DRV_NVS_USE */
 
 
 void drv_eth_set_config(void)
@@ -1027,9 +1040,9 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     //}
 
     xSemaphoreGive(flag_eth_got_ip);
-    #if CONFIG_USE_WIFI
-    drv_wifi_or_eth_give_semaphore();
-    #endif
+    // #if CONFIG_USE_WIFI
+    // drv_wifi_or_eth_give_semaphore();
+    // #endif
 }
 
 
@@ -1106,11 +1119,15 @@ void drv_eth_wait_get_ip_ms(int timeout)
 void drv_eth_init(void)
 {
     flag_eth_got_ip = xSemaphoreCreateBinary(); 
-    #if CONFIG_USE_WIFI
-    drv_wifi_or_eth_create_semaphore();
-    #endif
+    
+    cmd_eth_register();
+    cmd_ethernet_iperf_register();
 
-#if CONFIG_USE_ETHERNET
+
+    // #if CONFIG_USE_WIFI
+    // drv_wifi_or_eth_create_semaphore();
+    // #endif
+
     int eth_index = 0;
 
     ESP_LOGI(TAG, "drv_eth_init Started");
@@ -1134,18 +1151,32 @@ void drv_eth_init(void)
     esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&cfg);
 
-
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     // Init MAC and PHY configs to default
-    //eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
 
     phy_config.phy_addr = CONFIG_ETH_PHY_ADDR;
     phy_config.reset_gpio_num = CONFIG_ETH_PHY_RST_GPIO;
-    eth_mac_config_t esp32_emac_config = ETH_MAC_DEFAULT_CONFIG();
+    eth_esp32_emac_config_t esp32_emac_config = ETH_ESP32_EMAC_DEFAULT_CONFIG();
     esp32_emac_config.smi_mdc_gpio_num = CONFIG_ETH_MDC_GPIO;
     esp32_emac_config.smi_mdio_gpio_num = CONFIG_ETH_MDIO_GPIO;
-    esp32_emac_config.rx_task_stack_size += 1024;
-    esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&esp32_emac_config);
+    mac_config.rx_task_stack_size += 1024;
+    esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&esp32_emac_config, &mac_config);
+#else
+    // Init MAC and PHY configs to default
+    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
+
+    phy_config.phy_addr = CONFIG_ETH_PHY_ADDR;
+    phy_config.reset_gpio_num = CONFIG_ETH_PHY_RST_GPIO;
+
+    mac_config.smi_mdc_gpio_num = CONFIG_ETH_MDC_GPIO;
+    mac_config.smi_mdio_gpio_num = CONFIG_ETH_MDIO_GPIO;
+    mac_config.rx_task_stack_size += 1024;
+    esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_config);
+#endif
+
 #if CONFIG_ETH_PHY_IP101
     esp_eth_phy_t *phy = esp_eth_phy_new_ip101(&phy_config);
 #elif CONFIG_ETH_PHY_RTL8201
@@ -1364,14 +1395,9 @@ void drv_eth_init(void)
 #endif // CONFIG_USE_SPI_ETHERNET
 
 
-#else
-    ESP_LOGE(TAG, "drv_eth_init Skipped");
-#endif
 }
 
 esp_err_t drv_eth_get_mac(drv_eth_interface_t ifx, uint8_t mac[6])
 {
     return esp_eth_ioctl(eth_phy_handle, ETH_CMD_G_MAC_ADDR, mac);
 }
-
-#endif

@@ -12,7 +12,6 @@
  * Header Includes
  **************************************************************************** */
 #include "cmd_eth.h"
-#if CONFIG_USE_ETHERNET
 #include "drv_eth.h"
 
 #include <string.h>
@@ -169,4 +168,3 @@ void cmd_eth_register(void)
 {
     register_eth();
 }
-#endif
