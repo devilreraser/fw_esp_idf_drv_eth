@@ -29,17 +29,16 @@ menu "Component drv_eth Configuration"
         default 19 if IDF_TARGET_ESP32C3
         default 48 if IDF_TARGET_ESP32S3
 
-    config USE_INTERNAL_ETHERNET
+    config DRV_ETH_USE_INTERNAL_ETHERNET
         depends on IDF_TARGET_ESP32
         select USE_ETHERNET
         bool "Internal EMAC"
         default n
-        # default y
         select ETH_USE_ESP32_EMAC
         help
             Use internal Ethernet MAC controller.
 
-    if USE_INTERNAL_ETHERNET        
+    if DRV_ETH_USE_INTERNAL_ETHERNET        
         choice ETH_PHY_MODEL
             prompt "Ethernet PHY Device"
             default ETH_PHY_LAN87XX
@@ -115,25 +114,26 @@ menu "Component drv_eth Configuration"
             default 0
             help
                 Set PHY address according your board schematic.
-    endif # USE_INTERNAL_ETHERNET
+    endif # DRV_ETH_USE_INTERNAL_ETHERNET
 
-    config USE_SPI_ETHERNET
+    config DRV_ETH_USE_SPI_ETHERNET
         bool "SPI Ethernet"
-        default n
+        default y
         select USE_ETHERNET
+        select ETH_USE_SPI_ETHERNET #for internal library components
         help
             Use external SPI-Ethernet module(s).
 
     config SPI_ETHERNETS_NUM
         int "Number of SPI Ethernet modules to use at a time"
         range 0 2
-        default 1 if USE_SPI_ETHERNET
+        default 1 if DRV_ETH_USE_SPI_ETHERNET
         default 0
         help
             Set the number of SPI Ethernet modules you want to use at a time. Multiple SPI modules can be connected
             to one SPI interface and can be separately accessed based on state of associated Chip Select (CS).
 
-    if USE_SPI_ETHERNET
+    if DRV_ETH_USE_SPI_ETHERNET
         choice ETHERNET_TYPE_SPI
             prompt "Ethernet SPI"
             default USE_W5500
@@ -269,12 +269,12 @@ menu "Component drv_eth Configuration"
             default 2
             help
                 Set the second SPI Ethernet module PHY address according your board schematic.
-    endif # USE_SPI_ETHERNET
+    endif # DRV_ETH_USE_SPI_ETHERNET
 
     config USE_ETHERNET
         bool "Use Ethernet"
-        default y if USE_INTERNAL_ETHERNET
-        default y if USE_SPI_ETHERNET
+        default y if DRV_ETH_USE_INTERNAL_ETHERNET
+        default y if DRV_ETH_USE_SPI_ETHERNET
         default n
         help
             Use Ethernet MAC controller.

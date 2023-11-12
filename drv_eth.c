@@ -35,9 +35,9 @@
 #include "esp_system.h"
 #include "driver/gpio.h"
 #include "sdkconfig.h"
-#if CONFIG_USE_SPI_ETHERNET
+#if CONFIG_DRV_ETH_USE_SPI_ETHERNET
 #include "driver/spi_master.h"
-#endif // CONFIG_USE_SPI_ETHERNET
+#endif // CONFIG_DRV_ETH_USE_SPI_ETHERNET
 
 //#include "esp_wifi.h"   //for mac address usage
 
@@ -188,7 +188,7 @@ struct esp_netif_obj {
 /* *****************************************************************************
  * Constants and Macros Definitions
  **************************************************************************** */
-#if CONFIG_USE_SPI_ETHERNET
+#if CONFIG_DRV_ETH_USE_SPI_ETHERNET
 #define INIT_SPI_ETH_MODULE_CONFIG(eth_module_config, num)                                      \
     do {                                                                                        \
         eth_module_config[num].spi_cs_gpio = CONFIG_ETH_SPI_CS ##num## _GPIO;           \
@@ -206,7 +206,7 @@ struct esp_netif_obj {
 /* *****************************************************************************
  * Type Definitions
  **************************************************************************** */
-#if CONFIG_USE_SPI_ETHERNET
+#if CONFIG_DRV_ETH_USE_SPI_ETHERNET
 typedef struct {
     uint8_t spi_cs_gpio;
     uint8_t int_gpio;
@@ -863,6 +863,7 @@ void drv_eth_set_default_ip(esp_netif_t *netif)
 
 }
 
+#if CONFIG_USE_ETHERNET
 /** Event handler for Ethernet events */
 static void eth_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data)
@@ -1110,6 +1111,7 @@ static void drv_eth_mac_fix(esp_eth_handle_t eth_handle, int eth_index, bool fix
     }
 }
 
+#endif  /* #if CONFIG_USE_ETHERNET */
 
 void drv_eth_wait_get_ip_ms(int timeout)
 {
@@ -1118,11 +1120,16 @@ void drv_eth_wait_get_ip_ms(int timeout)
 
 void drv_eth_init(void)
 {
-    flag_eth_got_ip = xSemaphoreCreateBinary(); 
-    
     cmd_eth_register();
     cmd_ethernet_iperf_register();
 
+    #if CONFIG_DRV_NVS_USE
+    drv_eth_load_config();
+    #endif
+
+    flag_eth_got_ip = xSemaphoreCreateBinary(); 
+
+#if CONFIG_USE_ETHERNET
 
     // #if CONFIG_USE_WIFI
     // drv_wifi_or_eth_create_semaphore();
@@ -1145,7 +1152,7 @@ void drv_eth_init(void)
     
     esp_netif_eth_count = 0;    //must be zeroed also on de-init
 
-#if CONFIG_USE_INTERNAL_ETHERNET
+#if CONFIG_DRV_ETH_USE_INTERNAL_ETHERNET
     ESP_LOGI(TAG, "Ethernet Internal Install Started");
     // Create new default instance of esp-netif for Ethernet
     esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
@@ -1203,9 +1210,9 @@ void drv_eth_init(void)
     eth_connected[esp_netif_eth_count] = false;
     esp_netif_eth[esp_netif_eth_count++] = eth_netif;
     ESP_LOGI(TAG, "Ethernet Internal Install Success");
-#endif //CONFIG_USE_INTERNAL_ETHERNET
+#endif //CONFIG_DRV_ETH_USE_INTERNAL_ETHERNET
 
-#if CONFIG_USE_SPI_ETHERNET
+#if CONFIG_DRV_ETH_USE_SPI_ETHERNET
     // Create instance(s) of esp-netif for SPI Ethernet(s)
     esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_ETH();
     esp_netif_config_t cfg_spi = {
@@ -1339,7 +1346,7 @@ void drv_eth_init(void)
 
         ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
         // w5500 ethernet driver is based on spi driver
-        #if defined(USE_5_0_RELEASE) && (USE_5_0_RELEASE)
+        #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
             eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(CONFIG_ETH_SPI_HOST, &devcfg);
         #else
             eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(spi_handle[i]);
@@ -1373,7 +1380,7 @@ void drv_eth_init(void)
         ESP_ERROR_CHECK(esp_netif_attach(eth_netif_spi[i], esp_eth_new_netif_glue(eth_handle_spi[i])));
     }
     eth_phy_handle = eth_handle_spi[0];
-#endif // CONFIG_USE_SPI_ETHERNET
+#endif // CONFIG_DRV_ETH_USE_SPI_ETHERNET
 
     
     //drv_eth_set_config();
@@ -1383,17 +1390,20 @@ void drv_eth_init(void)
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &got_ip_event_handler, NULL));
 
     /* start Ethernet driver state machine */
-#if CONFIG_USE_INTERNAL_ETHERNET
+#if CONFIG_DRV_ETH_USE_INTERNAL_ETHERNET
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
-#endif // CONFIG_USE_INTERNAL_ETHERNET
-#if CONFIG_USE_SPI_ETHERNET
+#endif // CONFIG_DRV_ETH_USE_INTERNAL_ETHERNET
+#if CONFIG_DRV_ETH_USE_SPI_ETHERNET
     for (int i = 0; i < CONFIG_SPI_ETHERNETS_NUM; i++) {
         //int speed = ETH_SPEED_100M;
         //ESP_ERROR_CHECK(esp_eth_ioctl(eth_handle_spi[i], ETH_CMD_S_SPEED, &speed));
         ESP_ERROR_CHECK(esp_eth_start(eth_handle_spi[i]));
     }
-#endif // CONFIG_USE_SPI_ETHERNET
+#endif // CONFIG_DRV_ETH_USE_SPI_ETHERNET
 
+#else  /* #if CONFIG_USE_ETHERNET */
+    ESP_LOGE(TAG, "Ethernet intreface Not Installed. Select SPI or Internal.");
+#endif  /* #if CONFIG_USE_ETHERNET */
 
 }
 
