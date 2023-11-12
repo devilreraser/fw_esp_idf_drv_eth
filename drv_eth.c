@@ -21,6 +21,8 @@
 
 #if CONFIG_ESP_ETH_ESP_IDF_VERSION_LESS_THAN_5
 #define ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5    0
+#elif CONFIG_ESP_ETH_ESP_IDF_VERSION_GREATHER_EQUAL_5
+#define ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5    1
 #elif ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #define ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5    1
 #else
@@ -39,10 +41,10 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
-#if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
-#else
+//#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+//#else
 #include "esp_eth_netif_glue.h"
-#endif
+//#endif
 
 #include "esp_netif.h"
 #include "esp_netif_types.h"
