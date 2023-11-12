@@ -15,12 +15,22 @@
 #include "cmd_eth.h"
 #include "cmd_ethernet.h"
 
+#include <sdkconfig.h>
 #include "esp_idf_version.h"
+
+
+#if CONFIG_ESP_ETH_ESP_IDF_VERSION_LESS_THAN_5
+#define ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5    0
+#elif ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#define ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5    1
+#else
+#define ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5    0
+#endif
+
 
 //#include "drv_wifi.h"???
 
 
-//#include <sdkconfig.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +38,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+
+#if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
+#else
+#include "esp_eth_netif_glue.h"
+#endif
 
 #include "esp_netif.h"
 #include "esp_netif_types.h"
@@ -1160,7 +1175,7 @@ void drv_eth_init(void)
     esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&cfg);
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
     // Init MAC and PHY configs to default
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
@@ -1348,7 +1363,7 @@ void drv_eth_init(void)
 
         ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
         // w5500 ethernet driver is based on spi driver
-        #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        #if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
             eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(CONFIG_ETH_SPI_HOST, &devcfg);
         #else
             eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(spi_handle[i]);
