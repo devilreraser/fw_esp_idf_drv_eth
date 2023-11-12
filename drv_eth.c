@@ -1265,7 +1265,10 @@ void drv_eth_init(void)
     gpio_install_isr_service(0);
 
     // Init SPI bus
+    #if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
+    #else
     spi_device_handle_t spi_handle[CONFIG_SPI_ETHERNETS_NUM] = { NULL };
+    #endif
     spi_bus_config_t buscfg = {
         .miso_io_num = CONFIG_ETH_SPI_MISO_GPIO,
         .mosi_io_num = CONFIG_ETH_SPI_MOSI_GPIO,
@@ -1310,9 +1313,14 @@ void drv_eth_init(void)
         // Set SPI module Chip Select GPIO
         devcfg.spics_io_num = spi_eth_module_config[i].spi_cs_gpio;
 
-        ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
+
         // KSZ8851SNL ethernet driver is based on spi driver
-        eth_ksz8851snl_config_t ksz8851snl_config = ETH_KSZ8851SNL_DEFAULT_CONFIG(spi_handle[i]);
+        #if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
+            eth_ksz8851snl_config_t ksz8851snl_config = ETH_KSZ8851SNL_DEFAULT_CONFIG(CONFIG_ETH_SPI_HOST, &devcfg);
+        #else
+            ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
+            eth_ksz8851snl_config_t ksz8851snl_config = ETH_KSZ8851SNL_DEFAULT_CONFIG(spi_handle[i]);
+        #endif
 
         // Set remaining GPIO numbers and configuration used by the SPI module
         ksz8851snl_config.int_gpio_num = spi_eth_module_config[i].int_gpio;
@@ -1335,9 +1343,13 @@ void drv_eth_init(void)
         // Set SPI module Chip Select GPIO
         devcfg.spics_io_num = spi_eth_module_config[i].spi_cs_gpio;
 
-        ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
         // dm9051 ethernet driver is based on spi driver
-        eth_dm9051_config_t dm9051_config = ETH_DM9051_DEFAULT_CONFIG(spi_handle[i]);
+        #if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
+            eth_dm9051_config_t dm9051_config = ETH_DM9051_DEFAULT_CONFIG(CONFIG_ETH_SPI_HOST, &devcfg);
+        #else
+            ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
+            eth_dm9051_config_t dm9051_config = ETH_DM9051_DEFAULT_CONFIG(spi_handle[i]);
+        #endif
 
         // Set remaining GPIO numbers and configuration used by the SPI module
         dm9051_config.int_gpio_num = spi_eth_module_config[i].int_gpio;
@@ -1363,11 +1375,11 @@ void drv_eth_init(void)
         // Set SPI module Chip Select GPIO
         devcfg.spics_io_num = spi_eth_module_config[i].spi_cs_gpio;
 
-        ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
         // w5500 ethernet driver is based on spi driver
         #if ESP_ETH_VERSION_BIGGER_OR_EQUAL_TO_5
             eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(CONFIG_ETH_SPI_HOST, &devcfg);
         #else
+            ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_ETH_SPI_HOST, &devcfg, &spi_handle[i]));
             eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(spi_handle[i]);
         #endif
 
