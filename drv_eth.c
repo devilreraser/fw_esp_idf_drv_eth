@@ -15,6 +15,8 @@
 #include "cmd_eth.h"
 #include "cmd_ethernet.h"
 
+#include "esp_idf_version.h"
+
 //#include "drv_wifi.h"???
 
 
